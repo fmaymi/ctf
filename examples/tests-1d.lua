@@ -64,6 +64,7 @@ local function build_mysim(cls)
       outfile['prim' ] = self.Primitive[{{Ng,-Ng},nil}]
       outfile['grav' ] = self.Gravity  [{{Ng,-Ng},nil}]
       outfile['exact'] = Pexact        [{{Ng,-Ng},nil}]
+      print('writing checkpoint '.. fname)
       outfile:close()
    end
 
@@ -103,6 +104,8 @@ local function build_mysim(cls)
          end
          f:close()
       end
+
+      self.problem:user_work_finish()
    end
 end
 

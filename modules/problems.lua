@@ -24,6 +24,8 @@ local problems = {
    SrhdCase1DFIM98       = oo.class('SrhdCase1DFIM98'      , TwoStateProblem),
    SrhdCase2DFIM98       = oo.class('SrhdCase2DFIM98'      , TwoStateProblem),
    SrhdHardTransverseRAM = oo.class('SrhdHardTransverseRAM', TwoStateProblem),
+
+   Explosion             = oo.class('Explosion'		   , TestProblem),
 }
 
 function TestProblem:__init__(user_opts)
@@ -37,6 +39,122 @@ function TestProblem:user_work_iteration() end
 function TestProblem:user_work_finish() end
 function TestProblem:boundary_conditions() return 'periodic' end
 function TestProblem:fluid() return self._fluid or 'nrhyd' end
+
+function problems.Explosion:initialize_problem()
+--new test problem, to run type: ./ctf examples/tests-1d.lua Explosion
+   self.max_density      = { }
+   self.max_pressure     = { }
+   self.max_velocity     = { }
+   self.mid_density      = { }
+   self.mid_pressure     = { }
+   self.mid_velocity     = { }
+   self.max_density_loc  = { }
+   self.max_pressure_loc = { }
+   self.max_velocity_loc = { } 
+end
+
+function problems.Explosion:solution(x, y, z, t)
+   local P = {1, 1, 0, 0, 0}
+   if math.abs(x - .5) < .1 then --setting delta x
+      P[2] = 10
+   end
+   return P
+end
+
+function problems.Explosion:boundary_conditions() 
+   return 'outflow'
+end
+
+function problems.Explosion:user_work_iteration()
+   local sim     = self.simulation
+   local t       = sim.status.simulation_time
+   local Ng      = sim.Ng
+   local Nmid    = sim.N / 2
+   local rho     = sim.Primitive[{{Ng,-Ng}, {0,1}}]:vector()
+   local pre     = sim.Primitive[{{Ng,-Ng}, {1,2}}]:vector()
+   local vx      = sim.Primitive[{{Ng,-Ng}, {2,3}}]:vector()
+   local Dmax    = 0.0
+   local Pmax    = 0.0
+   local Vmax    = 0.0
+   local posDmax = 0.0
+   local posPmax = 0.0
+   local posVmax = 0.0
+
+   for i=0,#rho-1 do
+      if rho[i] > Dmax then Dmax = rho[i] end
+   end
+
+   for i=0,#pre-1 do
+      if pre[i] > Pmax then Pmax = pre[i] end
+   end
+
+   for i=0,#rho-1 do
+      if rho[i] > posDmax then posDmax = i end
+   end
+
+   for i=0,#pre-1 do
+      if pre[i] > posPmax then posPmax = i end
+   end
+
+   for i=0,#vx-1 do
+      if vx[i] > Vmax then Vmax = vx[i] end
+   end
+
+   for i=0,#vx-1 do
+      if vx[i] > posVmax then posVmax = i end
+   end
+
+   self.max_density[t]      = Dmax
+   self.mid_density[t]      = rho[Nmid]
+   self.max_density_loc[t]  = posDmax
+   self.max_pressure[t]     = Pmax
+   self.mid_pressure[t]     = pre[Nmid]
+   self.max_pressure_loc[t] = posPmax
+   self.max_velocity[t]     = Vmax
+   self.mid_velocity[t]     = vx[Nmid]
+   self.max_velocity_loc[t] = posVmax
+end
+
+function problems.Explosion:user_work_finish()
+   local f = io.open('max-density.dat', 'w')
+   for k,v in pairs(self.max_density) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('central-density.dat', 'w')
+   for k,v in pairs(self.mid_density) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('max-density-loc.dat', 'w')
+   for k,v in pairs(self.max_density_loc) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('max-pressure.dat', 'w')
+   for k,v in pairs(self.max_pressure) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('central-pressure.dat', 'w')
+   for k,v in pairs(self.mid_pressure) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('max-pressure-loc.dat', 'w')
+   for k,v in pairs(self.max_density_loc) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('max-velocity.dat', 'w')
+   for k,v in pairs(self.max_velocity) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('central-velocity.dat', 'w')
+   for k,v in pairs(self.mid_velocity) do
+      f:write(k..' '..v,'\n')
+   end
+   local f = io.open('max-velocity-loc.dat', 'w')
+   for k,v in pairs(self.max_velocity_loc) do
+      f:write(k..' '..v,'\n')
+   end
+
+   f:close()
+end
 
 
 function problems.soundwave:fluid()
@@ -145,7 +263,7 @@ function problems.collapse1d:user_work_iteration()
    self.max_density[sim.status.simulation_time] = Dmax
 end
 
-function problems.collapse1d:user_work_iteration()
+function problems.collapse1d:user_work_finish()
    local f = io.open('stuff.dat', 'w')
    for k,v in pairs(self.max_density) do
       f:write(k..' '..v,'\n')
