@@ -129,4 +129,8 @@ function FishSimulation:user_work_iteration()
    self.problem:user_work_iteration()
 end
 
+function FishSimulation:user_work_finish()
+   self.problem:user_work_finish()
+end
+
 return {FishSimulation=FishSimulation}
